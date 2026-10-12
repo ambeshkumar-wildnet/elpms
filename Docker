@@ -1,8 +1,18 @@
-FROM php:7.4-fpm
+FROM php:7.4-fpm-alpine
 
-# Install system dependencies (including libpq-dev)
-RUN apt-get update && apt-get install -y \
-    git curl libpng-dev libonig-dev libxml2-dev zip unzip nginx libpq-dev
+# Install system dependencies & PostgreSQL dev libraries
+RUN apk add --no-cache \
+    git \
+    curl \
+    libpng-dev \
+    oniguruma-dev \
+    libxml2-dev \
+    zip \
+    unzip \
+    nginx \
+    postgresql-dev \
+    nodejs \
+    npm
 
 # Install PHP extensions
 RUN docker-php-ext-install pdo_mysql pdo_pgsql mbstring gd
@@ -14,11 +24,9 @@ WORKDIR /var/www
 
 COPY . .
 
-# Install dependencies ignoring minor platform requirements & build frontend assets
+# Install dependencies & build frontend assets
 RUN composer install --no-dev --optimize-autoloader --ignore-platform-reqs
-RUN curl -sL https://deb.nodesource.com/setup_16.x | bash - \
-    && apt-get install -y nodejs \
-    && npm install && npm run build
+RUN npm install && npm run build
 
 # Configure permissions
 RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
