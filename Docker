@@ -1,6 +1,21 @@
+# --- Stage 1: Build Frontend Assets ---
+FROM node:14-alpine AS frontend-builder
+
+WORKDIR /app
+
+COPY package*.json webpack.mix.js ./
+COPY resources/ ./resources/
+
+# Limit Node heap memory to 384MB to prevent Render Free Tier OOM (exit code 9)
+ENV NODE_OPTIONS="--max-old-space-size=384"
+
+RUN npm ci --no-optional
+# Running 'dev' instead of 'production' saves massive RAM during compilation
+RUN npm run dev
+
+# --- Stage 2: Final Production PHP Image ---
 FROM php:7.4-fpm-alpine
 
-# Install system dependencies & PostgreSQL dev libraries
 RUN apk add --no-cache \
     git \
     curl \
@@ -9,29 +24,21 @@ RUN apk add --no-cache \
     libxml2-dev \
     zip \
     unzip \
-    nginx \
-    postgresql-dev \
-    nodejs-current \
-    npm
+    postgresql-dev
 
-# Install PHP extensions
 RUN docker-php-ext-install pdo_mysql pdo_pgsql mbstring gd
 
-# Install Composer
 COPY --from=composer:2.2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www
 
 COPY . .
 
-# Install PHP dependencies
+# Copy compiled frontend assets from Stage 1
+COPY --from=frontend-builder /app/public /var/www/public
+
 RUN composer install --no-dev --optimize-autoloader --ignore-platform-reqs
 
-# Build frontend assets with legacy OpenSSL support
-ENV NODE_OPTIONS=--openssl-legacy-provider
-RUN npm install && npm run production
-
-# Configure permissions
 RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
 
 EXPOSE 80
