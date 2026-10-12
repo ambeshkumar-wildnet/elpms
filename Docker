@@ -24,9 +24,9 @@ WORKDIR /var/www
 
 COPY . .
 
-# Install dependencies & build frontend assets
+# Install dependencies & build frontend assets using Laravel Mix
 RUN composer install --no-dev --optimize-autoloader --ignore-platform-reqs
-RUN npm install && npm run build
+RUN npm install && npm run production
 
 # Configure permissions
 RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
