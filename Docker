@@ -11,7 +11,7 @@ RUN apk add --no-cache \
     unzip \
     nginx \
     postgresql-dev \
-    nodejs \
+    nodejs-current \
     npm
 
 # Install PHP extensions
@@ -24,8 +24,11 @@ WORKDIR /var/www
 
 COPY . .
 
-# Install dependencies & build frontend assets using Laravel Mix
+# Install PHP dependencies
 RUN composer install --no-dev --optimize-autoloader --ignore-platform-reqs
+
+# Build frontend assets with legacy OpenSSL support
+ENV NODE_OPTIONS=--openssl-legacy-provider
 RUN npm install && npm run production
 
 # Configure permissions
